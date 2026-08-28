@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "hooks": {
+    "preToolUse": [
+      {
+        "matcher": "Write|Edit|Delete",
+        "command": "node \"${CURSOR_PLUGIN_ROOT}/bin/agent-learning-gate-cursor-hook\"",
+        "timeout": 30,
+        "failClosed": true
+      }
+    ],
+    "beforeShellExecution": [
+      {
+        "matcher": "AGENTS|CLAUDE|SKILL|\\.cursorrules|\\.cursor|\\.agents|\\.agent-learning-gate",
+        "command": "node \"${CURSOR_PLUGIN_ROOT}/bin/agent-learning-gate-cursor-hook\"",
+        "timeout": 30,
+        "failClosed": true
+      }
+    ]
+  }
+}

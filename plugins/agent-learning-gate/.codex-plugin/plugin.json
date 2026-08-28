@@ -1,0 +1,27 @@
+{
+  "name": "agent-learning-gate",
+  "version": "0.2.0+codex.20260828133018",
+  "description": "Review durable-learning proposals and freeze protected Codex patches for external application.",
+  "author": {
+    "name": "Agent Learning Gate Maintainers"
+  },
+  "license": "Apache-2.0",
+  "keywords": [
+    "agent-memory",
+    "agent-skills",
+    "evidence",
+    "policy-as-code"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Agent Learning Gate",
+    "shortDescription": "Guard durable agent learning proposals.",
+    "longDescription": "Agent Learning Gate provides one evidence protocol with host adapters for Claude Code, Codex, Cursor, and Pi.",
+    "developerName": "Agent Learning Gate Maintainers",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Interactive"
+    ],
+    "defaultPrompt": "Review this proposed memory, instruction, or skill with Agent Learning Gate before it is persisted."
+  }
+}

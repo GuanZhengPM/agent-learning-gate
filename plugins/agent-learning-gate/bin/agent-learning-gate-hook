@@ -1,0 +1,4 @@
+#!/usr/bin/env node
+import { runHookProcess } from "../lib/hook.mjs";
+
+runHookProcess();

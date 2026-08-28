@@ -1,0 +1,19 @@
+{
+  "description": "Codex deny-only gate for durable apply_patch operations.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "^apply_patch$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${PLUGIN_ROOT}/bin/agent-learning-gate-codex-hook\"",
+            "commandWindows": "node \"${PLUGIN_ROOT}/bin/agent-learning-gate-codex-hook\"",
+            "timeout": 30,
+            "statusMessage": "Agent Learning Gate is checking this durable patch..."
+          }
+        ]
+      }
+    ]
+  }
+}

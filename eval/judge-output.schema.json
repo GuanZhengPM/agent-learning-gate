@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["cases", "summary"],
+  "properties": {
+    "cases": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "recommended_decision", "comparison", "rationale"],
+        "properties": {
+          "id": { "type": "string" },
+          "recommended_decision": { "enum": ["PASS", "BLOCK", "ABSTAIN"] },
+          "comparison": { "enum": ["agree", "false_pass", "false_block", "overconfident_block", "unclear"] },
+          "rationale": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": ["total", "agree", "false_pass", "false_block", "overconfident_block", "unclear"],
+      "properties": {
+        "total": { "type": "integer" },
+        "agree": { "type": "integer" },
+        "false_pass": { "type": "integer" },
+        "false_block": { "type": "integer" },
+        "overconfident_block": { "type": "integer" },
+        "unclear": { "type": "integer" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

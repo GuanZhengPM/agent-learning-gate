@@ -1,0 +1,7 @@
+.DS_Store
+node_modules/
+.agent-learning-gate/
+.claude/settings.local.json
+*.tmp
+*.log
+coverage/

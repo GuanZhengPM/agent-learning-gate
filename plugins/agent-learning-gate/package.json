@@ -1,0 +1,26 @@
+{
+  "name": "agent-learning-gate",
+  "version": "0.2.0",
+  "description": "Universal evidence and scope gate for persistent agent learning proposals",
+  "type": "module",
+  "private": true,
+  "bin": {
+    "agent-learning-gate": "./bin/agent-learning-gate",
+    "agent-learning-gate-hook": "./bin/agent-learning-gate-hook",
+    "agent-learning-gate-codex-hook": "./bin/agent-learning-gate-codex-hook",
+    "agent-learning-gate-cursor-hook": "./bin/agent-learning-gate-cursor-hook"
+  },
+  "scripts": {
+    "test": "node ../../scripts/run-tests.mjs",
+    "benchmark": "node ./bin/agent-learning-gate benchmark ../../benchmark/wrong-lessons-v0.jsonl"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": ["pi-package", "agent-memory", "durable-learning"],
+  "pi": {
+    "extensions": ["./extensions/agent-learning-gate.js"],
+    "skills": ["./skills"]
+  },
+  "license": "Apache-2.0"
+}

@@ -1,0 +1,8 @@
+#!/usr/bin/env node
+import {
+  evaluateCursorHook,
+  renderCursorHook,
+  runHostHookProcess,
+} from "../lib/host-adapters.mjs";
+
+runHostHookProcess({ evaluate: evaluateCursorHook, render: renderCursorHook });

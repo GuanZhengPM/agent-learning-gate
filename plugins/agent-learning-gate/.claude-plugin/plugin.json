@@ -1,0 +1,15 @@
+{
+  "name": "agent-learning-gate",
+  "version": "0.2.0",
+  "description": "Stops coding agents from turning weak or ambiguous feedback into unsupported durable instructions.",
+  "author": {
+    "name": "Agent Learning Gate Maintainers"
+  },
+  "keywords": [
+    "agent-memory",
+    "coding-agents",
+    "learning-proposals",
+    "policy-as-code"
+  ],
+  "hooks": "./hooks/claude-hooks.json"
+}

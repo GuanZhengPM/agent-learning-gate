@@ -1,0 +1,20 @@
+{
+  "name": "agent-learning-gate",
+  "interface": {
+    "displayName": "Agent Learning Gate"
+  },
+  "plugins": [
+    {
+      "name": "agent-learning-gate",
+      "source": {
+        "source": "local",
+        "path": "./plugins/agent-learning-gate"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    }
+  ]
+}

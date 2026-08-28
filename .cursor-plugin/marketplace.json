@@ -1,0 +1,16 @@
+{
+  "name": "agent-learning-gate",
+  "owner": { "name": "Agent Learning Gate Maintainers" },
+  "metadata": {
+    "description": "Universal durable-learning gates for coding agents."
+  },
+  "plugins": [
+    {
+      "name": "agent-learning-gate",
+      "source": "plugins/agent-learning-gate",
+      "description": "Reviews durable agent-learning proposals and freezes protected Agent writes.",
+      "version": "0.2.0",
+      "category": "Developer Tools"
+    }
+  ]
+}

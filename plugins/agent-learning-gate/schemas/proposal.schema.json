@@ -1,0 +1,159 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:agent-learning-gate:schema:proposal:1",
+  "title": "Agent Learning Gate learning proposal",
+  "description": "A proposed durable learning change. user_confirmation is provenance only; authorization happens through a trusted host prompt when supported, otherwise outside the Agent.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["evidence", "proposal"],
+  "properties": {
+    "id": { "type": "string" },
+    "session_id": { "type": "string" },
+    "evidence": {
+      "oneOf": [
+        { "$ref": "#/$defs/evidence" },
+        { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/evidence" } }
+      ]
+    },
+    "current": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "active_scope": { "type": "string", "minLength": 1 },
+        "artifacts": { "type": "array", "items": { "$ref": "#/$defs/artifact" } }
+      }
+    },
+    "proposal": { "$ref": "#/$defs/proposal" },
+    "user_confirmation": {
+      "description": "Untrusted provenance only. The checker never treats this object as write authorization.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "confirmed": { "type": "boolean", "deprecated": true, "description": "Ignored by Agent Learning Gate; retained only for backward-compatible provenance." },
+        "source_turn": { "type": "string" },
+        "evidence": { "type": "string" }
+      }
+    }
+  },
+  "$defs": {
+    "scope": {
+      "enum": ["turn", "session", "task", "workspace", "project", "task_family", "domain", "global"]
+    },
+    "evidenceKind": {
+      "enum": [
+        "implicit_praise", "implicit_dislike", "implicit_feedback", "acknowledgement", "sarcasm", "uncertain",
+        "explicit_preference", "explicit_correction", "explicit_instruction", "explicit_remember", "explicit_constraint",
+        "one_off_instruction", "session_instruction", "task_instruction", "mixed_feedback", "factual_statement", "procedure_request"
+      ]
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text", "kind", "scope"],
+      "properties": {
+        "text": { "type": "string", "minLength": 1 },
+        "kind": { "$ref": "#/$defs/evidenceKind" },
+        "scope": { "$ref": "#/$defs/scope" },
+        "role": { "const": "user" },
+        "source_turn": { "type": "string" },
+        "explicit_persistence": { "type": "boolean" }
+      }
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "key": { "type": "string" },
+        "target": { "type": "string" },
+        "scope": { "$ref": "#/$defs/scope" },
+        "status": { "enum": ["candidate", "trial", "active", "retired"] },
+        "content": { "type": "string" },
+        "value": {}
+      }
+    },
+    "procedure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["trigger", "steps", "success_criteria"],
+      "properties": {
+        "trigger": { "type": "string", "minLength": 1 },
+        "steps": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+        "success_criteria": {
+          "oneOf": [
+            { "type": "string", "minLength": 1 },
+            { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } }
+          ]
+        }
+      }
+    },
+    "operation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tool"],
+      "properties": {
+        "tool": { "enum": ["Write", "Edit", "write", "edit", "apply_patch"] },
+        "file_path": { "type": "string", "minLength": 1 },
+        "content": { "type": "string" },
+        "old_string": { "type": "string", "minLength": 1 },
+        "new_string": { "type": "string" },
+        "replace_all": { "type": "boolean" },
+        "command": { "type": "string", "minLength": 1, "maxLength": 8000 },
+        "adapter": { "enum": ["claude-code", "codex", "cursor", "pi", "generic"] }
+      },
+      "oneOf": [
+        {
+          "properties": {
+            "tool": { "enum": ["Write", "write"] },
+            "file_path": {},
+            "content": {}
+          },
+          "required": ["file_path", "content"]
+        },
+        {
+          "properties": {
+            "tool": { "enum": ["Edit", "edit"] },
+            "file_path": {},
+            "old_string": {},
+            "new_string": {}
+          },
+          "required": ["file_path", "old_string", "new_string"]
+        },
+        {
+          "properties": {
+            "tool": { "const": "apply_patch" },
+            "adapter": { "const": "codex" },
+            "command": {}
+          },
+          "required": ["command", "adapter"]
+        }
+      ]
+    },
+    "proposal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["target", "content", "scope", "durability"],
+      "properties": {
+        "target": { "enum": ["memory", "auto-memory", "user", "agent.md", "AGENT.md", "agents", "agents.md", "AGENTS.md", "claude.md", "CLAUDE.md", "policy", "rule", "rules", "skill", "skill.md", "SKILL.md"] },
+        "content": { "type": "string", "minLength": 1 },
+        "scope": { "$ref": "#/$defs/scope" },
+        "install_scope": { "enum": ["workspace", "project", "global"] },
+        "durability": { "enum": ["observation", "candidate", "trial", "active", "stable", "procedure", "permanent"] },
+        "key": { "type": "string" },
+        "value": {},
+        "replaces": { "type": "string" },
+        "supersedes": { "type": "array", "uniqueItems": true, "items": { "type": "string" } },
+        "procedure": { "$ref": "#/$defs/procedure" },
+        "trigger": { "type": ["string", "null"] },
+        "steps": { "type": "array", "items": { "type": "string" } },
+        "success_criteria": {
+          "oneOf": [
+            { "type": "string" },
+            { "type": "array", "items": { "type": "string" } }
+          ]
+        },
+        "operation": { "$ref": "#/$defs/operation" }
+      }
+    }
+  }
+}

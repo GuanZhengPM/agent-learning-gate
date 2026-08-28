@@ -1,0 +1,18 @@
+{
+  "description": "Claude Code native confirmation gate for durable-learning writes.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/bin/agent-learning-gate-hook\"",
+            "timeout": 30,
+            "statusMessage": "Agent Learning Gate is checking this durable-learning write..."
+          }
+        ]
+      }
+    ]
+  }
+}

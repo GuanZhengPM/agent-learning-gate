@@ -1,0 +1,8 @@
+#!/usr/bin/env node
+import {
+  evaluateCodexHook,
+  renderCodexHook,
+  runHostHookProcess,
+} from "../lib/host-adapters.mjs";
+
+runHostHookProcess({ evaluate: evaluateCodexHook, render: renderCodexHook });

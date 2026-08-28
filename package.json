@@ -1,0 +1,48 @@
+{
+  "name": "agent-learning-gate",
+  "version": "0.2.0",
+  "description": "Universal review, receipt, and host-adapter gate for durable coding-agent learning",
+  "type": "module",
+  "bin": {
+    "agent-learning-gate": "./plugins/agent-learning-gate/bin/agent-learning-gate"
+  },
+  "files": [
+    "plugins/agent-learning-gate/.claude-plugin",
+    "plugins/agent-learning-gate/.codex-plugin",
+    "plugins/agent-learning-gate/.cursor-plugin",
+    "plugins/agent-learning-gate/adapters",
+    "plugins/agent-learning-gate/bin",
+    "plugins/agent-learning-gate/extensions",
+    "plugins/agent-learning-gate/hooks",
+    "plugins/agent-learning-gate/lib",
+    "plugins/agent-learning-gate/schemas",
+    "plugins/agent-learning-gate/skills",
+    "plugins/agent-learning-gate/LICENSE",
+    "plugins/agent-learning-gate/README.md",
+    "plugins/agent-learning-gate/SECURITY.md",
+    "plugins/agent-learning-gate/package.json",
+    "benchmark",
+    "README.md",
+    "SECURITY.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "node scripts/run-tests.mjs",
+    "benchmark": "node plugins/agent-learning-gate/bin/agent-learning-gate benchmark benchmark/wrong-lessons-v0.jsonl",
+    "privacy": "node scripts/privacy-check.mjs",
+    "validate:json": "node scripts/validate-json.mjs",
+    "validate": "npm run test && npm run benchmark && npm run validate:json && npm run privacy"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "ajv": "8.20.0"
+  },
+  "keywords": ["pi-package", "agent-harness", "durable-learning"],
+  "pi": {
+    "extensions": ["./plugins/agent-learning-gate/extensions/agent-learning-gate.js"],
+    "skills": ["./plugins/agent-learning-gate/skills"]
+  },
+  "license": "Apache-2.0"
+}

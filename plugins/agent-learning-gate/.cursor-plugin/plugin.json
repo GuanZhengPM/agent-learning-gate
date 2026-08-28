@@ -1,0 +1,10 @@
+{
+  "name": "agent-learning-gate",
+  "version": "0.2.0",
+  "description": "Review durable-learning proposals and freeze protected Cursor Agent writes.",
+  "author": { "name": "Agent Learning Gate Maintainers" },
+  "license": "Apache-2.0",
+  "keywords": ["agent-memory", "durable-learning", "policy-as-code"],
+  "skills": "./skills/",
+  "hooks": "./hooks/cursor-hooks.json"
+}

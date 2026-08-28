@@ -1,0 +1,17 @@
+{
+  "name": "agent-learning-gate",
+  "owner": {
+    "name": "Agent Learning Gate Maintainers"
+  },
+  "metadata": {
+    "description": "A marketplace for evidence-gated durable learning across coding agents."
+  },
+  "plugins": [
+    {
+      "name": "agent-learning-gate",
+      "source": "./plugins/agent-learning-gate",
+      "description": "Checks evidence-backed durable-learning proposals; this marketplace installs the Claude Code adapter.",
+      "version": "0.2.0"
+    }
+  ]
+}
