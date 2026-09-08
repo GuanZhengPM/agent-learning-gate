@@ -62,3 +62,16 @@ Any path, content, patch, or preimage change requires a new review; on Claude Co
 When replacing an existing lesson, require explicit replacement language, name the active/trial same-target artifact in `replaces` or `supersedes`, and bind the exact old and new content. Codex v0 intentionally denies replacement patches; use a separate reviewed workflow rather than weakening the patch gate.
 
 Agent Learning Gate is a cooperative harness guard, not an operating-system sandbox. If the active host adapter is absent, disabled, untrusted, or unsupported, report that boundary and leave the durable change unapplied.
+
+## Decision ledger
+
+When the project contains `DECISIONS.md`, negative decisions are recorded there, not in memory, rules, or free-form notes. Entries injected at session start are settled: do not re-propose, retry, or work around them; if a request conflicts with one, say which entry and ask before acting.
+
+Record with the CLI rather than editing the file, one entry per item, as soon as the decision is made:
+
+```bash
+"$CLI" ledger add --project-dir "$PROJECT_DIR" --kind rejected|failed|veto|constraint --title "<short name>" --why "<why it was ruled out>" --source user|tool|agent
+"$CLI" ledger none --project-dir "$PROJECT_DIR" --reason "<one sentence>"
+```
+
+`--source user` when the user said it, `tool` when a command or test showed it, `agent` when you concluded it. If the Stop Hook asks for the ledger, run one of the two commands above and then finish; do not paraphrase a rejection into `NOTES.md` instead. Retire an outdated entry with `--kind superseded --supersedes "<title>"`; never delete entries.

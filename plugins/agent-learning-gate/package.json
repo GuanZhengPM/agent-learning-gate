@@ -8,7 +8,10 @@
     "agent-learning-gate": "./bin/agent-learning-gate",
     "agent-learning-gate-hook": "./bin/agent-learning-gate-hook",
     "agent-learning-gate-codex-hook": "./bin/agent-learning-gate-codex-hook",
-    "agent-learning-gate-cursor-hook": "./bin/agent-learning-gate-cursor-hook"
+    "agent-learning-gate-cursor-hook": "./bin/agent-learning-gate-cursor-hook",
+    "agent-learning-gate-ledger-hook": "./bin/agent-learning-gate-ledger-hook",
+    "agent-learning-gate-codex-ledger-hook": "./bin/agent-learning-gate-codex-ledger-hook",
+    "agent-learning-gate-cursor-ledger-hook": "./bin/agent-learning-gate-cursor-ledger-hook"
   },
   "scripts": {
     "test": "node ../../scripts/run-tests.mjs",

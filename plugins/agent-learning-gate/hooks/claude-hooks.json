@@ -1,5 +1,5 @@
 {
-  "description": "Claude Code native confirmation gate for durable-learning writes.",
+  "description": "Claude Code native confirmation gate for durable-learning writes, plus the opt-in decision ledger (active only when DECISIONS.md exists in the project).",
   "hooks": {
     "PreToolUse": [
       {
@@ -10,6 +10,52 @@
             "command": "node \"${CLAUDE_PLUGIN_ROOT}/bin/agent-learning-gate-hook\"",
             "timeout": 30,
             "statusMessage": "Agent Learning Gate is checking this durable-learning write..."
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear|compact|fork",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/bin/agent-learning-gate-ledger-hook\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/bin/agent-learning-gate-ledger-hook\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit|NotebookEdit|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/bin/agent-learning-gate-ledger-hook\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/bin/agent-learning-gate-ledger-hook\"",
+            "timeout": 10
           }
         ]
       }

@@ -1,0 +1,9 @@
+# Importer settings. Owned by the platform team.
+importer:
+    source: notes
+    batch_size: 200
+  retry:
+      attempts: 3
+      backoff_seconds: 5
+logging:
+   level: info

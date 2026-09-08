@@ -12,6 +12,16 @@ import {
   stageProposal,
   verifyReviewReceipt,
 } from "./permits.mjs";
+import {
+  LEDGER_KINDS,
+  LEDGER_SOURCES,
+  activeEntries,
+  appendEntry,
+  initLedger,
+  readLedger,
+  recordNone,
+  renderLedgerContext,
+} from "./ledger.mjs";
 import { parseJsonLines, readJson, redactHome } from "./utils.mjs";
 
 function usage() {
@@ -27,8 +37,85 @@ Usage:
   agent-learning-gate capabilities [claude-code|codex|cursor|pi|generic] [--format text|json]
   agent-learning-gate benchmark <cases.jsonl> [--format text|json]
   agent-learning-gate demo [--format text|json]
+  agent-learning-gate ledger init|add|none|list|render|path [--project-dir <path>] [options]
   agent-learning-gate version
+
+Ledger options:
+  add   --kind rejected|failed|veto|constraint|superseded --title "..." --why "..."
+        [--source user|tool|agent] [--session <id>] [--host <host>] [--supersedes "<title>"]
+  none  --reason "..."          record that this session had nothing to add
+  list  [--format text|json]    active entries (superseded ones hidden; --all shows every entry)
 `;
+}
+
+function runLedger(argv, format) {
+  const action = argv[1];
+  const projectDir = path.resolve(option(argv, "--project-dir", process.cwd()));
+  if (!action || action.startsWith("--")) {
+    throw new Error("ledger requires an action: init, add, none, list, render, or path.");
+  }
+  if (action === "path") {
+    process.stdout.write(`${readLedger(projectDir).path}\n`);
+    return EXIT_CODES.PASS;
+  }
+  if (action === "init") {
+    const { path: filePath, created } = initLedger(projectDir);
+    process.stdout.write(
+      format === "json"
+        ? `${JSON.stringify({ path: filePath, created }, null, 2)}\n`
+        : `${created ? "Created" : "Already present"}: ${filePath}\n`,
+    );
+    return EXIT_CODES.PASS;
+  }
+  if (action === "add") {
+    const { path: filePath, entry } = appendEntry(projectDir, {
+      kind: option(argv, "--kind"),
+      title: option(argv, "--title"),
+      why: option(argv, "--why"),
+      source: option(argv, "--source"),
+      session: option(argv, "--session"),
+      host: option(argv, "--host"),
+      supersedes: option(argv, "--supersedes"),
+    });
+    process.stdout.write(
+      format === "json"
+        ? `${JSON.stringify({ path: filePath, entry }, null, 2)}\n`
+        : `Recorded [${entry.kind}] ${entry.title} in ${filePath}\n`,
+    );
+    return EXIT_CODES.PASS;
+  }
+  if (action === "none") {
+    const reason = option(argv, "--reason");
+    if (!reason) throw new Error("ledger none requires --reason \"...\".");
+    const marker = recordNone(projectDir, reason);
+    process.stdout.write(
+      format === "json"
+        ? `${JSON.stringify(marker, null, 2)}\n`
+        : `Recorded: nothing to add to the ledger for this session (${marker.at}).\n`,
+    );
+    return EXIT_CODES.PASS;
+  }
+  if (action === "list" || action === "render") {
+    const ledger = readLedger(projectDir);
+    if (action === "render") {
+      process.stdout.write(`${renderLedgerContext(ledger.entries)}\n`);
+      return EXIT_CODES.PASS;
+    }
+    const entries = argv.includes("--all") ? ledger.entries : activeEntries(ledger.entries);
+    process.stdout.write(
+      format === "json"
+        ? `${JSON.stringify({ path: ledger.path, exists: ledger.exists, entries }, null, 2)}\n`
+        : entries.length === 0
+          ? `No ${argv.includes("--all") ? "" : "active "}entries in ${ledger.path}\n`
+          : `${entries
+              .map((entry) => `[${entry.kind}] ${entry.title}${entry.fields.why ? ` — ${entry.fields.why}` : ""}`)
+              .join("\n")}\n`,
+    );
+    return EXIT_CODES.PASS;
+  }
+  throw new Error(
+    `Unknown ledger action '${action}'. Kinds: ${LEDGER_KINDS.join(", ")}. Sources: ${LEDGER_SOURCES.join(", ")}.`,
+  );
 }
 
 function option(args, name, fallback = null) {
@@ -169,6 +256,8 @@ export async function main(argv = process.argv.slice(2)) {
     );
     return EXIT_CODES.PASS;
   }
+
+  if (command === "ledger") return runLedger(argv, format);
 
   const filePath = argv[1];
   if (!filePath) throw new Error(`${command} requires a file path.`);

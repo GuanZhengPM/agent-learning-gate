@@ -18,6 +18,7 @@ const jsonFiles = [
   "plugins/agent-learning-gate/hooks/hooks.json",
   "plugins/agent-learning-gate/package.json",
   "plugins/agent-learning-gate/schemas/proposal.schema.json",
+  "benchmark/handoff-probe/tasks/dates-regex/task.json",
   "package.json",
 ];
 

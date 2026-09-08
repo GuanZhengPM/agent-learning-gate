@@ -1,0 +1,4 @@
+#!/usr/bin/env node
+import { runLedgerHookProcess } from "../lib/ledger.mjs";
+
+runLedgerHookProcess("cursor");

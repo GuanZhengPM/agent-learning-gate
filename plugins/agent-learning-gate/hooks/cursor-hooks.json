@@ -16,6 +16,31 @@
         "timeout": 30,
         "failClosed": true
       }
+    ],
+    "sessionStart": [
+      {
+        "command": "node \"${CURSOR_PLUGIN_ROOT}/bin/agent-learning-gate-cursor-ledger-hook\"",
+        "timeout": 10
+      }
+    ],
+    "afterFileEdit": [
+      {
+        "command": "node \"${CURSOR_PLUGIN_ROOT}/bin/agent-learning-gate-cursor-ledger-hook\"",
+        "timeout": 10
+      }
+    ],
+    "afterShellExecution": [
+      {
+        "command": "node \"${CURSOR_PLUGIN_ROOT}/bin/agent-learning-gate-cursor-ledger-hook\"",
+        "timeout": 10
+      }
+    ],
+    "stop": [
+      {
+        "command": "node \"${CURSOR_PLUGIN_ROOT}/bin/agent-learning-gate-cursor-ledger-hook\"",
+        "timeout": 10,
+        "loop_limit": 1
+      }
     ]
   }
 }

@@ -1,5 +1,5 @@
 {
-  "description": "Codex deny-only gate for durable apply_patch operations.",
+  "description": "Codex deny-only gate for durable apply_patch operations, plus the opt-in decision ledger (active only when DECISIONS.md exists in the project).",
   "hooks": {
     "PreToolUse": [
       {
@@ -11,6 +11,55 @@
             "commandWindows": "node \"${PLUGIN_ROOT}/bin/agent-learning-gate-codex-hook\"",
             "timeout": 30,
             "statusMessage": "Agent Learning Gate is checking this durable patch..."
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${PLUGIN_ROOT}/bin/agent-learning-gate-codex-ledger-hook\"",
+            "commandWindows": "node \"${PLUGIN_ROOT}/bin/agent-learning-gate-codex-ledger-hook\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${PLUGIN_ROOT}/bin/agent-learning-gate-codex-ledger-hook\"",
+            "commandWindows": "node \"${PLUGIN_ROOT}/bin/agent-learning-gate-codex-ledger-hook\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "^(Bash|apply_patch|exec|exec_command|shell|js|write_file|edit_file)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${PLUGIN_ROOT}/bin/agent-learning-gate-codex-ledger-hook\"",
+            "commandWindows": "node \"${PLUGIN_ROOT}/bin/agent-learning-gate-codex-ledger-hook\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${PLUGIN_ROOT}/bin/agent-learning-gate-codex-ledger-hook\"",
+            "commandWindows": "node \"${PLUGIN_ROOT}/bin/agent-learning-gate-codex-ledger-hook\"",
+            "timeout": 10
           }
         ]
       }

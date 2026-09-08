@@ -177,6 +177,43 @@ agent-learning-gate benchmark benchmark/wrong-lessons-v0.jsonl
 
 Claude project auto-memory 有文档化文件路径，因此可以纳入保护。Codex background Memories、Cursor native Memories/User Rules 和 Pi extension-managed memories 目前无法通过这些文件工具适配器拦截。
 
+### 决策账本
+
+Agent 自己写的交接材料（压缩摘要、记忆文件、子 Agent 汇报）系统性地记录"做到哪了、下一步做什么"，却漏掉"什么已经被否决、为什么"。下一个会话读不到否决信息，就会把被枪毙的方案再做一遍。决策账本把这类否定性信息变成一份强制维护的文件：
+
+- `DECISIONS.md` 是项目内的追加式记录，只收四类条目：`rejected`（试过并被否的方案）、`failed`（已知原因失败的尝试）、`veto`（用户明确说不要）、`constraint`（用户设定的边界）；要撤销一条，追加一条 `superseded`，不删旧条目。
+- 会话开始时，Hook 把当前有效条目注入上下文，要求 Agent 把它们当作既定决定，与新请求冲突时先说明再动手。
+- 会话做过修改或跑过命令后，Stop Hook 会拦截一次结束，要求 Agent 逐条 `ledger add`，或者用 `ledger none --reason` 明确声明本次没有新的否决。写入由 Hook 强制，不靠模型自觉。
+
+账本按项目选择启用：只有 `DECISIONS.md` 存在（或设置 `AGENT_LEARNING_GATE_LEDGER=on`）时 Hook 才生效；`AGENT_LEARNING_GATE_LEDGER_ENFORCE=0` 可以只注入、不拦截。
+
+```bash
+agent-learning-gate ledger init
+agent-learning-gate ledger add --kind rejected --title "parse_dates 用正则实现" --why "issue #42：本地化输入下静默接受非法月份" --source tool
+agent-learning-gate ledger add --kind constraint --title "不要修改 config/" --why "另一个团队负责" --source user
+agent-learning-gate ledger none --reason "纯重命名，没有否决任何方案"
+agent-learning-gate ledger list
+```
+
+| 宿主 | 注入 | 强制写入 | 备注 |
+|---|---:|---:|---|
+| Claude Code | SessionStart、UserPromptSubmit | Stop | `-p` 无人值守模式同样生效 |
+| Codex | SessionStart、UserPromptSubmit | Stop | `codex exec` 生效；项目级 Hook 需要信任或 `--dangerously-bypass-hook-trust` |
+| Cursor | sessionStart | 无 | CLI 打印模式不触发 `stop` Hook，只能注入 |
+
+账本 Hook 测试快照（2026-09-08）：Claude Code 2.1.237、Codex CLI 0.153.4、Cursor Agent 2026.09.02-c22c1a3。
+
+### 交接探针
+
+`benchmark/handoff-probe/` 用真实的 Claude Code、Codex、Cursor CLI 做一个可重复的两阶段实验：先在任务里埋入一条工具可见的否决和一条用户约束，通过"继续同一会话 / 新会话 / 委托子 Agent"三种渠道交接，再引诱下一个会话复活被否决的方案，用程序检查它有没有上钩，并对比账本开关的效果。使用订阅制 CLI，不需要 API key。
+
+```bash
+npm run handoff-probe -- --host claude,codex,cursor --channel fresh --ledger off,on --repeat 5
+npm run handoff-probe:summary
+```
+
+设计、检查项和各宿主的限制见 [benchmark/handoff-probe/README.md](benchmark/handoff-probe/README.md)。单次试验不说明任何问题；结论只对当时的 CLI 版本和模型成立。
+
 ### 评测
 
 ```bash
@@ -378,6 +415,43 @@ The shared classifier covers common file-based instruction, rule, and skill path
 Runtime permits and non-authorizing review receipts are stored outside consumer repositories under `~/.agent-learning-gate/projects/<hash>/` by default. Use `AGENT_LEARNING_GATE_STATE_DIR` to move them.
 
 Claude project auto-memory has a documented file path and is covered. Codex background Memories, Cursor native Memories/User Rules, and Pi extension-managed memories cannot currently be intercepted through these file-tool adapters.
+
+### Decision ledger
+
+Agent-authored handoff material (compaction summaries, memory files, subagent reports) reliably records progress and plans while dropping negative decisions: what was tried and rejected, and why. The next session cannot see a rejection it was never handed, so it revives the work. The decision ledger turns that class of information into a file the agent is required to maintain:
+
+- `DECISIONS.md` is an append-only project record with four entry kinds: `rejected` (tried and ruled out), `failed` (an attempt with a known cause), `veto` (the user said no), and `constraint` (a boundary the user set). Retire an entry by appending a `superseded` entry; nothing is deleted.
+- At session start a Hook injects the active entries and asks the agent to treat them as settled, and to say so before acting on a request that conflicts with one.
+- Once a session has edited files or run commands, the Stop Hook blocks the first attempt to finish until the agent either records entries with `ledger add` or states explicitly with `ledger none --reason` that there is nothing to add. The write is enforced by the Hook, not left to the model's judgement.
+
+The ledger is opt-in per project: the Hooks are inert until `DECISIONS.md` exists (or `AGENT_LEARNING_GATE_LEDGER=on`). Set `AGENT_LEARNING_GATE_LEDGER_ENFORCE=0` to inject without blocking.
+
+```bash
+agent-learning-gate ledger init
+agent-learning-gate ledger add --kind rejected --title "Regex-based parse_dates" --why "issue #42: silently accepted malformed months on locale input" --source tool
+agent-learning-gate ledger add --kind constraint --title "Do not modify config/" --why "owned by another team" --source user
+agent-learning-gate ledger none --reason "pure rename, nothing was ruled out"
+agent-learning-gate ledger list
+```
+
+| Host | Injection | Enforced write | Notes |
+|---|---:|---:|---|
+| Claude Code | SessionStart, UserPromptSubmit | Stop | works in unattended `-p` mode |
+| Codex | SessionStart, UserPromptSubmit | Stop | works under `codex exec`; project Hooks need trust or `--dangerously-bypass-hook-trust` |
+| Cursor | sessionStart | none | the CLI print mode does not fire the `stop` Hook, so the ledger is inject-only there |
+
+Ledger Hook snapshot (2026-09-08): Claude Code 2.1.237, Codex CLI 0.153.4, Cursor Agent 2026.09.02-c22c1a3.
+
+### Handoff probe
+
+`benchmark/handoff-probe/` is a repeatable two-phase experiment on the real Claude Code, Codex, and Cursor CLIs. It plants a tool-visible rejection and a user constraint, hands the project over through one of three channels (resume the session, start a fresh session, delegate to a subagent), tempts the next session to revive the rejected work, checks programmatically whether it did, and compares the ledger on and off. It runs on the CLIs' own subscriptions; no API key is needed.
+
+```bash
+npm run handoff-probe -- --host claude,codex,cursor --channel fresh --ledger off,on --repeat 5
+npm run handoff-probe:summary
+```
+
+Design, checks, and per-host limitations are in [benchmark/handoff-probe/README.md](benchmark/handoff-probe/README.md). A single trial proves nothing; results describe one CLI version and model at a time.
 
 ### Evaluation
 
