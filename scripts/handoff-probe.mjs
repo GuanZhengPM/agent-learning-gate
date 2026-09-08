@@ -81,7 +81,7 @@ function prepareProject(task, label) {
   const workdir = fs.mkdtempSync(path.join(os.tmpdir(), `handoff-probe-${label}-`));
   fs.cpSync(task.fixture, workdir, { recursive: true });
   git(workdir, "init", "-q");
-  git(workdir, "config", "user.email", "handoff-probe@example.invalid");
+  git(workdir, "config", "user.email", "handoff-probe@example.com");
   git(workdir, "config", "user.name", "handoff-probe");
   git(workdir, "add", "-A");
   git(workdir, "commit", "-q", "-m", "fixture");

@@ -8,43 +8,47 @@
 
 ### 项目简介
 
-Agent Learning Gate 用于审查 Coding Agent 准备写入长期记忆、规则或 Skill 的内容。它会检查证据、作用域、目标位置、持久性、冲突和具体写入操作，避免把随口反馈、一次性命令或局部纠正固化成长期指令。
+Agent Learning Gate 管两件事：Coding Agent **不该记住什么**，以及**不该忘掉什么**。
+
+- **学习门禁**：审查 Agent 准备写入长期记忆、规则或 Skill 的内容。它检查证据、作用域、目标位置、持久性、冲突和具体写入操作，避免把随口反馈、一次性命令或局部纠正固化成长期指令。
+- **决策账本**：强制 Agent 把被否决的方案、失败的尝试和用户划的边界记进 `DECISIONS.md`，并在每个新会话开始时注入，避免下一个会话把已经枪毙的方案再做一遍。
 
 ```text
 与宿主无关的核心
-  证据 + 作用域 + 目标位置 + 持久性 + 冲突 + 精确操作绑定
+  学习门禁：证据 + 作用域 + 目标位置 + 持久性 + 冲突 + 精确操作绑定
+  决策账本：追加式 DECISIONS.md + 开工注入 + 收工强制记录
         |
         +-- Claude Code adapter
         +-- Codex adapter
         +-- Cursor adapter
-        +-- Pi extension
+        +-- Pi extension（仅学习门禁）
         `-- generic CLI / CI adapter
 ```
 
-Agent 提交变更建议，确定性核心返回 `PASS`、`BLOCK` 或 `ABSTAIN`。宿主适配器再按照当前宿主提供的授权能力处理写入。
+学习门禁：Agent 提交变更建议，确定性核心返回 `PASS`、`BLOCK` 或 `ABSTAIN`，宿主适配器再按照当前宿主提供的授权能力处理写入。决策账本：Hook 在会话开始时把有效条目注入上下文，在会话做过修改后拦住第一次结束，要求 Agent 用 CLI 记录否决或明确声明没有。
 
 ### 能力矩阵
 
-| 宿主 | 写入前拦截 | 授权边界 | v0 写入支持 |
-|---|---:|---|---|
-| Claude Code | yes | 原生精确 `ask` | 单次 `Write` 或 `Edit` |
-| Codex | yes | Agent 内无可验证授权通道 | 审查精确 patch，阻止受保护的 `apply_patch` |
-| Cursor | yes | Agent 内无可验证授权通道 | 审查精确写入，阻止受保护的 `Write`/`Edit` |
-| Pi | yes | 默认拒绝的 TUI/RPC 选择 | 单次 `write` 或单项 edit |
-| Generic | no | none | `check`、`review`、`verify`、`benchmark` |
+| 宿主 | 写入前拦截 | 授权边界 | v0 写入支持 | 账本注入 | 账本强制写入 |
+|---|---:|---|---|---:|---:|
+| Claude Code | yes | 原生精确 `ask` | 单次 `Write` 或 `Edit` | yes | yes |
+| Codex | yes | Agent 内无可验证授权通道 | 审查精确 patch，阻止受保护的 `apply_patch` | yes | yes |
+| Cursor | yes | Agent 内无可验证授权通道 | 审查精确写入，阻止受保护的 `Write`/`Edit` | yes | no，CLI 打印模式不触发 `stop` |
+| Pi | yes | 默认拒绝的 TUI/RPC 选择 | 单次 `write` 或单项 edit | no | no |
+| Generic | no | none | `check`、`review`、`verify`、`benchmark`、`ledger` | 手动 `ledger render` | no |
 
 Codex 当前不支持可靠的 Hook `ask`：返回 `ask` 会使 Hook 失败，工具调用仍可能继续。Cursor 的通用 pre-tool `ask` 也没有形成可验证的授权边界。v0 对 Codex 和 Cursor 采用明确拒绝；Claude Code 和 Pi 可以在操作边界展示原生确认界面。
 
 宿主协议：[Claude Code Hooks](https://code.claude.com/docs/en/hooks)、[Codex Hooks](https://learn.chatgpt.com/docs/hooks)、[Cursor Hooks](https://cursor.com/docs/hooks)。Pi 的验证依据为 Pi 0.84.3 内置的 `docs/extensions.md` 和 `docs/packages.md`。
 
-测试快照（2026-08-28）：
+测试快照：
 
-| 接口 | 已测试版本 |
-|---|---|
-| Claude Code strict plugin validator | 2.1.250 |
-| Codex CLI / plugin Hooks | 0.146.0 |
-| Cursor Agent local plugin | 2026.08.25-3e8eec8 |
-| Pi package / extension API | 0.84.3 |
+| 接口 | 学习门禁（2026-08-28） | 决策账本 Hook（2026-09-08） |
+|---|---|---|
+| Claude Code | strict plugin validator 2.1.250 | 2.1.237，含 `-p` 无人值守模式 |
+| Codex CLI | 0.146.0 | 0.153.4，含 `codex exec` |
+| Cursor Agent | 2026.08.25-3e8eec8 | 2026.09.02-c22c1a3，仅注入 |
+| Pi | 0.84.3 | 不适用 |
 
 Hook 协议会随版本变化。升级后请重新执行后文的 smoke check，再确认相应行为仍然成立。
 
@@ -151,6 +155,10 @@ agent-learning-gate stage proposal.json --project-dir "$PWD" --host claude-code
 agent-learning-gate stage proposal.json --project-dir "$PWD" --host pi
 agent-learning-gate capabilities cursor --format json
 agent-learning-gate benchmark benchmark/wrong-lessons-v0.jsonl
+agent-learning-gate ledger init
+agent-learning-gate ledger add --kind rejected --title "..." --why "..." --source tool
+agent-learning-gate ledger none --reason "..."
+agent-learning-gate ledger list --format json
 ```
 
 | 结果 | 退出码 | 含义 |
@@ -195,13 +203,9 @@ agent-learning-gate ledger none --reason "纯重命名，没有否决任何方�
 agent-learning-gate ledger list
 ```
 
-| 宿主 | 注入 | 强制写入 | 备注 |
-|---|---:|---:|---|
-| Claude Code | SessionStart、UserPromptSubmit | Stop | `-p` 无人值守模式同样生效 |
-| Codex | SessionStart、UserPromptSubmit | Stop | `codex exec` 生效；项目级 Hook 需要信任或 `--dangerously-bypass-hook-trust` |
-| Cursor | sessionStart | 无 | CLI 打印模式不触发 `stop` Hook，只能注入 |
+触发点：Claude Code 和 Codex 在 `SessionStart`、`UserPromptSubmit` 注入，在 `Stop` 强制；Cursor 只在 `sessionStart` 注入。Codex 的项目级 Hook 需要在 `/hooks` 里信任，或在自动化中传 `--dangerously-bypass-hook-trust`。
 
-账本 Hook 测试快照（2026-09-08）：Claude Code 2.1.237、Codex CLI 0.153.4、Cursor Agent 2026.09.02-c22c1a3。
+DECISIONS.md 是给下一个会话看的，所以放在项目根目录、随仓库提交；不想入库时用 `AGENT_LEARNING_GATE_LEDGER_FILE` 改路径。
 
 ### 交接探针
 
@@ -223,7 +227,9 @@ npx -y node@18 scripts/run-tests.mjs
 npx -y @anthropic-ai/claude-code@2.1.250 plugin validate . --strict
 ```
 
-`WrongLessons-v0` 包含 54 个中英双语结构化策略用例，用于回归测试。它不衡量原始反馈抽取准确率。基于本地对话的实验数据保存在 gitignored `.agent-learning-gate/` 中；即使经过尽力脱敏，也应按敏感数据处理。
+`WrongLessons-v0` 包含 54 个中英双语结构化策略用例，用于回归测试。它不衡量原始反馈抽取准确率。决策账本有独立的单元测试；交接探针的结果和基于本地对话的实验数据都保存在 gitignored `.agent-learning-gate/` 中，即使经过尽力脱敏，也应按敏感数据处理。
+
+测试运行器会先清掉宿主注入的会话、项目和状态环境变量，再启动 `node --test`，因此在 Claude Code、Codex 或 Cursor 会话里跑测试与在 CI 里结果一致。
 
 ### 安全边界
 
@@ -247,43 +253,47 @@ Apache-2.0
 
 ### Overview
 
-Agent Learning Gate reviews content before a coding agent writes it to long-lived memory, rules, or skills. It checks evidence, scope, destination, durability, conflicts, and the exact write operation so that casual feedback, one-off commands, and local corrections do not become unsupported persistent instructions.
+Agent Learning Gate governs two things: what a coding agent **must not remember**, and what it **must not forget**.
+
+- **Learning gate**: reviews content before the agent writes it to long-lived memory, rules, or skills. It checks evidence, scope, destination, durability, conflicts, and the exact write operation so that casual feedback, one-off commands, and local corrections do not become unsupported persistent instructions.
+- **Decision ledger**: forces the agent to record rejected options, failed attempts, and user-set boundaries in `DECISIONS.md`, and injects them at the start of every session so the next session does not revive work that was already ruled out.
 
 ```text
 host-neutral core
-  evidence + scope + destination + durability + conflict + exact-operation binding
+  learning gate:   evidence + scope + destination + durability + conflict + exact-operation binding
+  decision ledger: append-only DECISIONS.md + inject at session start + enforced write at stop
         |
         +-- Claude Code adapter
         +-- Codex adapter
         +-- Cursor adapter
-        +-- Pi extension
+        +-- Pi extension (learning gate only)
         `-- generic CLI / CI adapter
 ```
 
-The agent submits a proposed change. The deterministic core returns `PASS`, `BLOCK`, or `ABSTAIN`. The host adapter then handles the write using the approval boundary available on that host.
+Learning gate: the agent submits a proposed change, the deterministic core returns `PASS`, `BLOCK`, or `ABSTAIN`, and the host adapter handles the write using the approval boundary available on that host. Decision ledger: Hooks inject the active entries when a session starts and, once the session has changed something, block its first attempt to finish until the agent records the session's rejections through the CLI or states that there are none.
 
 ### Capability matrix
 
-| Host | Pre-write block | Approval boundary | v0 mutation support |
-|---|---:|---|---|
-| Claude Code | yes | native exact `ask` | one `Write` or `Edit` |
-| Codex | yes | no verified in-Agent approval channel | review exact patch and deny protected `apply_patch` |
-| Cursor | yes | no verified in-Agent approval channel | review exact write and deny protected `Write`/`Edit` |
-| Pi | yes | deny-first TUI/RPC selection | one `write` or single edit |
-| Generic | no | none | `check`, `review`, `verify`, and `benchmark` |
+| Host | Pre-write block | Approval boundary | v0 mutation support | Ledger injection | Ledger enforced write |
+|---|---:|---|---|---:|---:|
+| Claude Code | yes | native exact `ask` | one `Write` or `Edit` | yes | yes |
+| Codex | yes | no verified in-Agent approval channel | review exact patch and deny protected `apply_patch` | yes | yes |
+| Cursor | yes | no verified in-Agent approval channel | review exact write and deny protected `Write`/`Edit` | yes | no; the CLI print mode never fires `stop` |
+| Pi | yes | deny-first TUI/RPC selection | one `write` or single edit | no | no |
+| Generic | no | none | `check`, `review`, `verify`, `benchmark`, and `ledger` | manual `ledger render` | no |
 
 Codex currently has no reliable Hook `ask` path: returning `ask` can fail the Hook while the tool call continues. Cursor's generic pre-tool `ask` also lacks a verified approval boundary. Version 0 uses explicit denial for Codex and Cursor. Claude Code and Pi can present native confirmation at the operation boundary.
 
 Host contracts: [Claude Code Hooks](https://code.claude.com/docs/en/hooks), [Codex Hooks](https://learn.chatgpt.com/docs/hooks), and [Cursor Hooks](https://cursor.com/docs/hooks). Pi validation uses the bundled `docs/extensions.md` and `docs/packages.md` from Pi 0.84.3.
 
-Tested snapshot (2026-08-28):
+Tested snapshot:
 
-| Surface | Tested version |
-|---|---|
-| Claude Code strict plugin validator | 2.1.250 |
-| Codex CLI / plugin Hooks | 0.146.0 |
-| Cursor Agent local plugin | 2026.08.25-3e8eec8 |
-| Pi package / extension API | 0.84.3 |
+| Surface | Learning gate (2026-08-28) | Decision-ledger Hooks (2026-09-08) |
+|---|---|---|
+| Claude Code | strict plugin validator 2.1.250 | 2.1.237, including unattended `-p` mode |
+| Codex CLI | 0.146.0 | 0.153.4, including `codex exec` |
+| Cursor Agent | 2026.08.25-3e8eec8 | 2026.09.02-c22c1a3, injection only |
+| Pi | 0.84.3 | not applicable |
 
 Hook contracts are version-sensitive. After an upgrade, rerun the smoke checks below before relying on the documented behavior.
 
@@ -390,6 +400,10 @@ agent-learning-gate stage proposal.json --project-dir "$PWD" --host claude-code
 agent-learning-gate stage proposal.json --project-dir "$PWD" --host pi
 agent-learning-gate capabilities cursor --format json
 agent-learning-gate benchmark benchmark/wrong-lessons-v0.jsonl
+agent-learning-gate ledger init
+agent-learning-gate ledger add --kind rejected --title "..." --why "..." --source tool
+agent-learning-gate ledger none --reason "..."
+agent-learning-gate ledger list --format json
 ```
 
 | Decision | Exit | Meaning |
@@ -434,13 +448,9 @@ agent-learning-gate ledger none --reason "pure rename, nothing was ruled out"
 agent-learning-gate ledger list
 ```
 
-| Host | Injection | Enforced write | Notes |
-|---|---:|---:|---|
-| Claude Code | SessionStart, UserPromptSubmit | Stop | works in unattended `-p` mode |
-| Codex | SessionStart, UserPromptSubmit | Stop | works under `codex exec`; project Hooks need trust or `--dangerously-bypass-hook-trust` |
-| Cursor | sessionStart | none | the CLI print mode does not fire the `stop` Hook, so the ledger is inject-only there |
+Trigger points: Claude Code and Codex inject on `SessionStart` and `UserPromptSubmit` and enforce on `Stop`; Cursor injects on `sessionStart` only. Codex project-level Hooks must be trusted in `/hooks`, or run with `--dangerously-bypass-hook-trust` in automation.
 
-Ledger Hook snapshot (2026-09-08): Claude Code 2.1.237, Codex CLI 0.153.4, Cursor Agent 2026.09.02-c22c1a3.
+`DECISIONS.md` exists for the next session, so it lives at the project root and is meant to be committed; point `AGENT_LEARNING_GATE_LEDGER_FILE` elsewhere if it must stay out of the repository.
 
 ### Handoff probe
 
@@ -462,7 +472,9 @@ npx -y node@18 scripts/run-tests.mjs
 npx -y @anthropic-ai/claude-code@2.1.250 plugin validate . --strict
 ```
 
-`WrongLessons-v0` contains 54 bilingual structured-policy cases for regression testing. It does not measure raw-feedback extraction accuracy. Experiments derived from local conversations stay under the gitignored `.agent-learning-gate/` directory and should be treated as sensitive even after best-effort redaction.
+`WrongLessons-v0` contains 54 bilingual structured-policy cases for regression testing. It does not measure raw-feedback extraction accuracy. The decision ledger has its own unit tests. Handoff-probe results and experiments derived from local conversations stay under the gitignored `.agent-learning-gate/` directory and should be treated as sensitive even after best-effort redaction.
+
+The test runner scrubs host-injected session, project, and state variables before spawning `node --test`, so running the suite inside a Claude Code, Codex, or Cursor session gives the same result as CI.
 
 ### Security boundary
 
